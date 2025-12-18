@@ -10,6 +10,7 @@ export const Navigation = ({ user, onLogout }) => {
 
   const navLinks = [
     { name: "Dashboard", path: "/dashboard" },
+    { name: "ChatBot", path: "/chatbot" },
     { name: "Community", path: "/community" },
     { name: "Resources", path: "/resources" },
     { name: "Find Help", path: "/findhelp" },
@@ -27,7 +28,7 @@ export const Navigation = ({ user, onLogout }) => {
             >
               <Brain className="h-8 w-8 text-pink-500 mr-2" />
               <span className="font-bold text-xl bg-gradient-to-r from-orange-500 to-pink-600 bg-clip-text text-transparent">
-                ClosedAI
+                Aroha
               </span>
             </div>
 

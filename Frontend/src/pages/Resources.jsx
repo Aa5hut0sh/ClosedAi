@@ -3,6 +3,7 @@ import axios from "axios";
 import { BookOpen, Image as ImageIcon } from "lucide-react";
 import { Navigation } from "../components/Navigate";
 import { ThumbsUp } from "lucide-react";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const Resources = ({ user, onLogout }) => {
   const [view, setView] = useState("blogs"); // blogs | memes
@@ -22,34 +23,34 @@ export const Resources = ({ user, onLogout }) => {
   // ---------------------------------------
   // FETCH BLOGS — NEWSAPI
   // ---------------------------------------
-  const fetchBlogs = async (more = false) => {
-    try {
-      if (!more) setLoadingBlogs(true);
+const fetchBlogs = async (more = false) => {
+  try {
+    if (!more) setLoadingBlogs(true);
 
-      const url = `https://newsapi.org/v2/everything?q="student mental health" OR "college stress" OR "university mental health"&sortBy=publishedAt&pageSize=10&page=${blogPage}&language=en&apiKey=${NEWS_API_KEY}`;
+    const url = `${API_BASE_URL}/blogs?page=${blogPage}`;
+    const res = await axios.get(url);
 
-      const res = await axios.get(url);
+    const newBlogs = res.data.articles.map((b) => ({
+      title: b.title,
+      description: b.description || "",
+      image: b.urlToImage,
+      url: b.url,
+      source: b.source.name,
+      publishedAt: b.publishedAt,
+    }));
 
-      const newBlogs = res.data.articles.map((b) => ({
-        title: b.title,
-        description: b.description || "",
-        image: b.urlToImage,
-        url: b.url,
-        source: b.source.name,
-        publishedAt: b.publishedAt,
-      }));
-
-      if (more) {
-        setBlogs((prev) => [...prev, ...newBlogs]);
-      } else {
-        setBlogs(newBlogs);
-      }
-    } catch (err) {
-      console.error("NewsAPI error:", err);
-    } finally {
-      setLoadingBlogs(false);
+    if (more) {
+      setBlogs((prev) => [...prev, ...newBlogs]);
+    } else {
+      setBlogs(newBlogs);
     }
-  };
+  } catch (err) {
+    console.error("Blogs fetch error:", err);
+  } finally {
+    setLoadingBlogs(false);
+  }
+};
+
 
   // ---------------------------------------
   // FETCH MEMES — REDDIT via Jina Proxy
@@ -228,34 +229,32 @@ export const Resources = ({ user, onLogout }) => {
             {loadingMemes ? (
               <MemeSkeleton />
             ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {memes.map((meme, index) => (
+                  <div
+                    key={index}
+                    className="bg-white rounded-xl shadow-md p-4 border hover:shadow-lg transition-all flex flex-col"
+                  >
+                    <h3 className="font-semibold text-gray-800 mb-3 text-sm">
+                      {meme.title}
+                    </h3>
 
-<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-  {memes.map((meme, index) => (
-    <div
-      key={index}
-      className="bg-white rounded-xl shadow-md p-4 border hover:shadow-lg transition-all flex flex-col"
-    >
-      <h3 className="font-semibold text-gray-800 mb-3 text-sm">
-        {meme.title}
-      </h3>
+                    {/* Image container */}
+                    <div className="w-full flex-grow flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
+                      <img
+                        src={meme.img}
+                        alt={meme.title}
+                        className="max-h-60 object-contain"
+                      />
+                    </div>
 
-      {/* Image container */}
-      <div className="w-full flex-grow flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
-        <img
-          src={meme.img}
-          alt={meme.title}
-          className="max-h-60 object-contain"
-        />
-      </div>
-
-      {/* Ups at bottom */}
-      <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
-        <ThumbsUp size={14} /> {meme.ups}
-      </p>
-    </div>
-  ))}
-</div>
-
+                    {/* Ups at bottom */}
+                    <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
+                      <ThumbsUp size={14} /> {meme.ups}
+                    </p>
+                  </div>
+                ))}
+              </div>
             )}
 
             <div className="mt-6 flex justify-center">

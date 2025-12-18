@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -8,7 +9,8 @@ app.use(cors());
 app.use(express.json());
 
 
-const dbUrl = "mongodb+srv://Ashutosh:Ashutosh%40123@cluster0.qq8iuhc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+const dbUrl = process.env.DBURL ;
 main()
   .then(() => console.log("App is connected to Database"))
   .catch((err) => console.log(err));

@@ -124,6 +124,7 @@ router.get("/bulk", async (req, res) => {
       firstname: user.firstname,
       lastname: user.lastname,
       _id: user._id,
+      streak:user.streak
     })),
   });
 });
@@ -149,6 +150,46 @@ router.post("/logout", authMiddleware, (req, res) => {
 });
 
 
+router.post("/activity", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let lastDate = user.lastActiveDate;
+    if (lastDate) {
+      lastDate = new Date(lastDate);
+      lastDate.setHours(0, 0, 0, 0);
+    }
+
+    if (!lastDate) {
+      // First time ever
+      user.streak = 1;
+    } else {
+      const diffDays =
+        (today - lastDate) / (1000 * 60 * 60 * 24);
+
+      if (diffDays === 1) {
+        // Continued streak
+        user.streak += 1;
+      } else if (diffDays > 1) {
+        // Streak broken
+        user.streak = 1;
+      }
+      // diffDays === 0 → same day → do nothing
+    }
+
+    user.lastActiveDate = today;
+    await user.save();
+
+    res.json({
+      streak: user.streak,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update streak" });
+  }
+});
 
 
 module.exports = router;

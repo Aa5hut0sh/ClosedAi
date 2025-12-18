@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState , useEffect } from "react";
+import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 import {
   Heart,
   TrendingUp,
@@ -134,6 +137,32 @@ const RecentActivity = () => (
 // MAIN DASHBOARD
 // -------------------------------------
 export const Dashboard = ({ user, onLogout }) => {
+  const [streak, setStreak] = useState(user.streak || 1);
+  useEffect(() => {
+    const updateStreak = async () => {
+      try {
+        const res = await axios.post(
+          `${API_BASE_URL}/user/activity`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        // Backend sends updated streak
+        if (res.data?.streak) {
+          setStreak(res.data.streak);
+        }
+      } catch (err) {
+        console.log("Failed to update streak");
+      }
+    };
+
+    updateStreak();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation user={user} onLogout={onLogout} />
@@ -150,7 +179,7 @@ export const Dashboard = ({ user, onLogout }) => {
         {/* Stats Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Stat title="Current Mood" value="Good" icon={<Heart />} color="border-pink-500" />
-          <Stat title="Streak Days" value={user.streak} icon={<Wind />} color="border-orange-500" />
+          <Stat title="Streak Days" value={streak} icon={<Wind />} color="border-orange-500" />
           <Stat title="Assessments" value="3" icon={<BarChart3 />} color="border-blue-500" />
           <Stat title="Wellness Score" value={user.wellnessScore} icon={<Brain />} color="border-purple-500" />
         </div>

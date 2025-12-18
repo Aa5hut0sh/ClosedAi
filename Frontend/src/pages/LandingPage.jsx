@@ -66,7 +66,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const appId = "closedai-health-app";
+const appId = "Aroha-health-app";
 
 const Button = ({
   children,
@@ -155,7 +155,7 @@ export const LandingPage = () => {
               <Brain className="h-6 w-6" />
             </div>
             <span className="text-2xl font-bold text-gray-900 tracking-tight">
-              ClosedAI
+              Aroha
             </span>
           </div>
 
@@ -207,7 +207,7 @@ export const LandingPage = () => {
                   </span>
                 </h1>
                 <p className="mt-6 text-lg text-gray-600 leading-relaxed max-w-lg mx-auto lg:mx-0">
-                  Break old patterns and form new habits. ClosedAI brings you
+                  Break old patterns and form new habits. Aroha brings you
                   effective, science-based tools to help you take control of
                   your emotional well-being.
                 </p>
@@ -299,7 +299,7 @@ export const LandingPage = () => {
                 </h2>
                 <p className="text-lg text-gray-600 mb-8 leading-relaxed">
                   How you feel matters! Whether you're feeling sad, anxious, or
-                  stressed, ClosedAI brings you effective tools and programs to
+                  stressed, Aroha brings you effective tools and programs to
                   help you take control of your feelings and thoughts.
                 </p>
                 <ul className="space-y-4">
@@ -591,7 +591,7 @@ export const LandingPage = () => {
           </div>
           <div className="border-t border-black/10 pt-8 flex flex-col md:flex-row justify-between items-center text-sm font-medium opacity-80">
             <div className="mb-4 md:mb-0">
-              &copy; 2024 ClosedAI. All rights reserved.
+              &copy; 2024 Aroha. All rights reserved.
             </div>
             <div className="flex gap-6">
               <a href="#" className="hover:text-white">

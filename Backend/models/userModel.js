@@ -28,6 +28,11 @@ const userSchema = new Schema({
     default: 1,
   },
 
+  lastActiveDate: {
+    type: Date,
+    default: null,
+  },
+
   wellnessScore: {
     type: Number,
     default: 50,

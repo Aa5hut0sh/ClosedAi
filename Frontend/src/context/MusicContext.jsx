@@ -3,88 +3,122 @@ import { createContext, useEffect, useRef, useState } from "react";
 export const MusicContext = createContext();
 
 export const MusicProvider = ({ children }) => {
-  const audioRef = useRef(new Audio("/music.mp3"));
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.4);
-  const [isMuted, setIsMuted] = useState(false);
-  const [prevVolume, setPrevVolume] = useState(0.4);
+  const audioRef = useRef(null);
+  const hasUserInteracted = useRef(false);
 
   // -----------------------------
-  // AUTOPLAY AFTER USER INTERACTION
+  // LOAD SAVED SETTINGS
+  // -----------------------------
+  const saved = JSON.parse(localStorage.getItem("musicSettings") || "{}");
+
+  const [isPlaying, setIsPlaying] = useState(saved.isPlaying ?? false);
+  const [volume, setVolume] = useState(saved.volume ?? 0.4);
+  const [isMuted, setIsMuted] = useState(saved.isMuted ?? false);
+  const [prevVolume, setPrevVolume] = useState(saved.prevVolume ?? 0.4);
+
+  // -----------------------------
+  // INIT AUDIO (ONCE)
   // -----------------------------
   useEffect(() => {
-    const audio = audioRef.current;
-    audio.loop = true;
-    audio.volume = volume;
-
-    audio.play().catch(() => {
-      console.log("Autoplay blocked. Waiting for interaction...");
-    });
-
-    const enableSound = () => {
-      if (!isPlaying) {
-        audio.play();
-        setIsPlaying(true);
-      }
-      document.removeEventListener("click", enableSound);
-      document.removeEventListener("keydown", enableSound);
-      document.removeEventListener("scroll", enableSound);
-    };
-
-    document.addEventListener("click", enableSound);
-    document.addEventListener("keydown", enableSound);
-    document.addEventListener("scroll", enableSound);
-
-    return () => {
-      document.removeEventListener("click", enableSound);
-      document.removeEventListener("keydown", enableSound);
-      document.removeEventListener("scroll", enableSound);
-    };
+    audioRef.current = new Audio("/music.mp3");
+    audioRef.current.loop = true;
+    audioRef.current.volume = isMuted ? 0 : volume;
   }, []);
 
   // -----------------------------
-  // HANDLE VOLUME CHANGE
+  // USER INTERACTION HANDLER
   // -----------------------------
+  useEffect(() => {
+    const enableAudio = async () => {
+      hasUserInteracted.current = true;
+
+      if (isPlaying && audioRef.current.paused) {
+        try {
+          await audioRef.current.play();
+        } catch (e) {
+          console.log("Play blocked, waiting...");
+        }
+      }
+
+      document.removeEventListener("click", enableAudio);
+      document.removeEventListener("keydown", enableAudio);
+    };
+
+    document.addEventListener("click", enableAudio);
+    document.addEventListener("keydown", enableAudio);
+
+    return () => {
+      document.removeEventListener("click", enableAudio);
+      document.removeEventListener("keydown", enableAudio);
+    };
+  }, [isPlaying]);
+
   // -----------------------------
-// HANDLE VOLUME CHANGE
-// -----------------------------
-useEffect(() => {
-  const audio = audioRef.current;
+  // PLAY / PAUSE SYNC
+  // -----------------------------
+  useEffect(() => {
+    if (!audioRef.current) return;
 
-  if (isMuted) {
-    audio.volume = 0;
-  } else {
-    audio.volume = volume;
-  }
-}, [volume, isMuted]);
+    if (!hasUserInteracted.current) return;
 
-// -----------------------------
-// MUTE BUTTON FIXED — INSTANT MUTE
-// -----------------------------
-const toggleMute = () => {
-  if (!isMuted) {
-    // Going to mute → remember volume
-    setPrevVolume(volume);
-    setIsMuted(true);
-    setVolume(0);
-  } else {
-    // Unmute → return to old volume
-    setIsMuted(false);
-    setVolume(prevVolume || 0.4);
-  }
-};
+    if (isPlaying) {
+      audioRef.current.play().catch(() => {});
+    } else {
+      audioRef.current.pause();
+    }
+  }, [isPlaying]);
 
+  // -----------------------------
+  // VOLUME / MUTE SYNC
+  // -----------------------------
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.volume = isMuted ? 0 : volume;
+  }, [volume, isMuted]);
+
+  // -----------------------------
+  // SAVE STATE
+  // -----------------------------
+  useEffect(() => {
+    localStorage.setItem(
+      "musicSettings",
+      JSON.stringify({
+        isPlaying,
+        volume,
+        isMuted,
+        prevVolume,
+      })
+    );
+  }, [isPlaying, volume, isMuted, prevVolume]);
+
+  // -----------------------------
+  // CONTROLS
+  // -----------------------------
+  const togglePlay = () => {
+    setIsPlaying((prev) => !prev);
+  };
+
+  const toggleMute = () => {
+    if (!isMuted) {
+      setPrevVolume(volume);
+      setIsMuted(true);
+      setVolume(0);
+    } else {
+      setIsMuted(false);
+      setVolume(prevVolume || 0.4);
+    }
+  };
 
   return (
     <MusicContext.Provider
       value={{
         audio: audioRef.current,
         isPlaying,
-        setIsPlaying,
+        togglePlay,
         volume,
         setVolume,
         isMuted,
-        toggleMute
+        toggleMute,
       }}
     >
       {children}

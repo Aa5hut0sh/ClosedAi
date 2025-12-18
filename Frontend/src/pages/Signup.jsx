@@ -5,6 +5,8 @@ import { Brain, AlertCircle } from "lucide-react"; // Added AlertCircle for erro
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export const Signup = () => {
   const [firstname, setFirstname] = useState("");
   const [lastname, setLastname] = useState("");
@@ -31,7 +33,7 @@ export const Signup = () => {
       setError(""); // Clear previous errors
 
       const response = await axios.post(
-        "http://localhost:3000/api/v1/user/signup",
+        `${API_BASE_URL}/user/signup`,
         { email, firstname, lastname, password }
       );
 
@@ -68,7 +70,7 @@ export const Signup = () => {
             Create Account
           </h1>
           <p className="text-gray-600 mt-1 text-center">
-            Join ClosedAI and take your first step towards emotional well-being.
+            Join Aroha and take your first step towards emotional well-being.
           </p>
         </div>
 

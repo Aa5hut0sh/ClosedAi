@@ -5,6 +5,8 @@ import { Brain } from "lucide-react";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export const Signin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,7 +16,7 @@ export const Signin = () => {
 
   const handleSignin = async () => {
     try {
-      const response = await axios.post("http://localhost:3000/api/v1/user/signin", {
+      const response = await axios.post(`${API_BASE_URL}/user/signin`, {
         email,
         password,
       });
@@ -57,7 +59,7 @@ export const Signin = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="harikrati@gmail.com"
+              placeholder="ashutosh@gmail.com"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#FF7E46] focus:ring-2 focus:ring-orange-100 bg-gray-50 focus:bg-white outline-none"
             />
           </div>

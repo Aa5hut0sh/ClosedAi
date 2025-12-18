@@ -1,65 +1,41 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import axios from "axios";
-import { 
-  Send, 
-  Bot, 
-  User, 
-  Sparkles, 
-  MoreVertical, 
-  ArrowUp 
+import {
+  Bot,
+  User,
+  ArrowUp,
+  Sparkles,
+  MoreVertical,
 } from "lucide-react";
 
 import { AuthContext } from "../context/AuthContext";
 import { Navigation } from "../components/Navigate";
 
-// --- BOUNCING TYPING DOTS ---
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+// ---------------- TYPING INDICATOR ----------------
 const TypingIndicator = () => (
-  <div className="flex items-center space-x-1 p-4 bg-white rounded-2xl rounded-tl-none shadow-sm border border-gray-100 w-fit">
-    <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-    <div className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"></div>
+  <div className="flex gap-1 px-4 py-3 bg-white border rounded-2xl rounded-tl-none shadow-sm w-fit">
+    <span className="w-2 h-2 bg-pink-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+    <span className="w-2 h-2 bg-orange-400 rounded-full animate-bounce" />
   </div>
 );
 
-// --- PRE-DEFINED FRONTEND AI REPLIES ---
-const getBotReply = (msg) => {
-  const text = msg.toLowerCase();
-
-  const rules = [
-    { key: ["sad", "depressed", "down"], reply: "I'm really sorry you're feeling this way. I'm here for you. Want to talk about what's hurting you the most right now?" },
-
-    { key: ["anxious", "anxiety", "panic"], reply: "Take a deep breath. You're safe. Try inhaling for 4 seconds and exhaling for 6. Want a calming exercise?" },
-
-    { key: ["sleep", "insomnia"], reply: "Sleep can be tough. I can give you some calming routines or relaxing tips if you'd like." },
-
-    { key: ["angry", "frustrated"], reply: "It's okay to feel angry. I'm here if you want to talk about what triggered it." },
-
-    { key: ["stress", "pressure"], reply: "Stress can feel heavy. Let’s break it down together. What’s the biggest worry right now?" },
-
-    { key: ["hello", "hi", "hey"], reply: "Hi there! How are you feeling today? 😊" },
-
-    { key: ["thanks", "thank you"], reply: "You're welcome! I'm always here for you." },
-
-    { key: ["help"], reply: "Of course. Tell me what's bothering you, and we’ll work through it." }
-  ];
-
-  for (let r of rules) {
-    if (r.key.some((k) => text.includes(k))) return r.reply;
-  }
-
-  return "I understand. Can you tell me a little more about what you're feeling right now?";
-};
-
+// ---------------- CHATBOT PAGE ----------------
 export const AIChatbot = () => {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const messagesEndRef = useRef(null);
 
   const [messages, setMessages] = useState([
-    { 
-      role: "bot", 
-      text: "Hello! I'm your personal mental wellness assistant. How are you feeling right now?", 
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    }
+    {
+      role: "bot",
+      text: "Hi! I'm your mental wellness assistant 🌱 How are you feeling today?",
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    },
   ]);
 
   const [input, setInput] = useState("");
@@ -67,49 +43,104 @@ export const AIChatbot = () => {
 
   const suggestions = [
     "I'm feeling anxious 😰",
-    "Help me sleep better 🌙",
     "I had a bad day 😔",
-    "Practice mindfulness 🧘"
+    "Help me sleep better 🌙",
+    "Give me a calming exercise 🧘",
   ];
 
+  const authHeaders = () => ({
+    Authorization: `Bearer ${token}`,
+  });
+
+  // ---------------- SCROLL ----------------
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => scrollToBottom(), [messages, loading]);
+  useEffect(scrollToBottom, [messages, loading]);
 
-  // --- SEND MESSAGE WITH PREDEFINED REPLIES ---
-  const sendMessage = async (textOverride = null) => {
-    const textToSend = textOverride || input;
+  // ---------------- LOAD CHAT HISTORY ----------------
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/chatbot/history`, {
+          headers: authHeaders(),
+        });
 
-    if (!textToSend.trim()) return;
+        if (res.data.messages && res.data.messages.length > 0) {
+          const formatted = res.data.messages.map((m) => ({
+            role: m.role,
+            text: m.text,
+            time: new Date(m.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          }));
 
-    const userMessage = {
-      role: "user",
-      text: textToSend,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          setMessages(formatted);
+        }
+      } catch (err) {
+        console.error("Failed to load chat history");
+      }
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    if (token) loadHistory();
+  }, [token]);
+
+  // ---------------- SEND MESSAGE ----------------
+  const sendMessage = async (textOverride = null) => {
+    const textToSend = textOverride ?? input;
+    if (!textToSend.trim()) return;
+
+    const userMsg = {
+      role: "user",
+      text: textToSend,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
-    // Simulate typing delay
-    setTimeout(() => {
-      const botText = getBotReply(textToSend);
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/chatbot`,
+        { message: textToSend },
+        { headers: authHeaders() }
+      );
 
-      const botMessage = {
+      const botMsg = {
         role: "bot",
-        text: botText,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        text: res.data.reply,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       };
 
-      setMessages((prev) => [...prev, botMessage]);
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text:
+            "I'm having trouble responding right now. Please try again in a moment 🙏",
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
-  const handleKey = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -118,79 +149,68 @@ export const AIChatbot = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCFE]">
-
-      {/* Background Lights */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10">
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-100 blur-3xl opacity-60 rounded-full"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-orange-50 blur-3xl opacity-60 rounded-full"></div>
-      </div>
-
       <Navigation user={user} />
 
-      <div className="flex items-center justify-center p-4 md:p-8 h-[calc(100vh-80px)]">
-
-        {/* Chat Body */}
-        <div className="w-full max-w-4xl h-full bg-white/80 backdrop-blur-xl shadow-xl rounded-3xl border border-white/40 flex flex-col overflow-hidden">
+      <div className="flex justify-center items-center p-4 md:p-8 h-[calc(100vh-80px)]">
+        <div className="w-full max-w-4xl h-full bg-white/80 backdrop-blur-xl border rounded-3xl shadow-xl flex flex-col overflow-hidden">
 
           {/* HEADER */}
-          <div className="px-6 py-4 bg-white/50 border-b flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
-                  <Bot className="text-white w-6 h-6" />
-                </div>
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-white rounded-full"></span>
+          <div className="px-6 py-4 border-b flex justify-between items-center bg-white/50">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Bot className="text-white" />
               </div>
-
               <div>
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  Serene AI <Sparkles className="w-4 h-4 text-yellow-500" />
+                <h2 className="font-bold flex items-center gap-1">
+                  Aroha - ChatBot <Sparkles size={16} className="text-yellow-500" />
                 </h2>
-                <p className="text-xs text-gray-500">Always here to support you</p>
+                <p className="text-xs text-gray-500">Your safe space</p>
               </div>
             </div>
-
-            <MoreVertical size={20} className="text-gray-400" />
+            <MoreVertical className="text-gray-400" />
           </div>
 
           {/* MESSAGES */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                
-                {/* Avatar */}
-                <div>
-                  {msg.role === "bot" ? (
-                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <Bot size={16} className="text-indigo-600" />
-                    </div>
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex gap-3 ${
+                  msg.role === "user" ? "flex-row-reverse" : ""
+                }`}
+              >
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100">
+                  {msg.role === "user" ? (
+                    <User size={16} className="text-orange-600" />
                   ) : (
-                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                      <User size={16} className="text-orange-600" />
-                    </div>
+                    <Bot size={16} className="text-indigo-600" />
                   )}
                 </div>
 
-                {/* Text Bubble */}
-                <div className={`flex flex-col max-w-[75%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                <div
+                  className={`max-w-[75%] flex flex-col ${
+                    msg.role === "user" ? "items-end" : ""
+                  }`}
+                >
                   <div
-                    className={`px-5 py-3 rounded-2xl shadow-sm text-[15px] leading-relaxed ${
+                    className={`px-5 py-3 rounded-2xl text-sm shadow-sm ${
                       msg.role === "user"
                         ? "bg-gray-900 text-white rounded-tr-none"
-                        : "bg-white border border-gray-200 rounded-tl-none text-gray-800"
+                        : "bg-white border rounded-tl-none"
                     }`}
                   >
                     {msg.text}
                   </div>
-                  <span className="text-[10px] text-gray-400 mt-1">{msg.time}</span>
+                  <span className="text-[10px] text-gray-400 mt-1">
+                    {msg.time}
+                  </span>
                 </div>
               </div>
             ))}
 
             {loading && (
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+              <div className="flex gap-3">
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100">
                   <Bot size={16} className="text-indigo-600" />
                 </div>
                 <TypingIndicator />
@@ -200,17 +220,15 @@ export const AIChatbot = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* INPUT AREA */}
-          <div className="p-6 bg-white border-t">
-
-            {/* Suggestions */}
+          {/* INPUT */}
+          <div className="p-6 border-t bg-white">
             {messages.length < 3 && (
-              <div className="flex gap-2 pb-4 overflow-x-auto">
+              <div className="flex gap-2 mb-4 overflow-x-auto">
                 {suggestions.map((s, i) => (
-                  <button 
+                  <button
                     key={i}
                     onClick={() => sendMessage(s)}
-                    className="px-4 py-2 text-sm bg-gray-100 hover:bg-indigo-50 rounded-full border border-gray-200 whitespace-nowrap"
+                    className="px-4 py-2 text-sm bg-gray-100 border rounded-full hover:bg-indigo-50"
                   >
                     {s}
                   </button>
@@ -218,13 +236,12 @@ export const AIChatbot = () => {
               </div>
             )}
 
-            <div className="flex items-end bg-gray-100 border border-gray-300 rounded-2xl p-2">
-              
+            <div className="flex items-end bg-gray-100 border rounded-2xl p-2">
               <textarea
                 rows={1}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKey}
+                onKeyDown={handleKeyDown}
                 placeholder="Type your message..."
                 className="flex-1 bg-transparent outline-none resize-none p-3 text-gray-700"
               />
@@ -243,10 +260,9 @@ export const AIChatbot = () => {
             </div>
 
             <p className="text-[10px] text-center mt-2 text-gray-400">
-              AI may make mistakes — verify important information.
+              This AI provides emotional support, not medical advice.
             </p>
           </div>
-
         </div>
       </div>
     </div>

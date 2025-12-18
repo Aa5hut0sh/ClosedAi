@@ -24,7 +24,7 @@ export const Community = () => {
   const [text, setText] = useState("");
 
   const messagesEndRef = useRef(null);
-  const api = "http://localhost:3000/api/v1";
+ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Helper to scroll to bottom
   const scrollToBottom = () => {
@@ -39,9 +39,9 @@ export const Community = () => {
 
     try {
       const [usersRes, friendsRes, reqRes] = await Promise.all([
-        axios.get(`${api}/community/all-users`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${api}/community/friends`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${api}/community/requests`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/community/all-users`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/community/friends`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/community/requests`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       setAllUsers(usersRes.data.users || []);
@@ -56,7 +56,7 @@ export const Community = () => {
 
   const loadChat = async (friendId, shouldScroll = true) => {
     try {
-      const res = await axios.get(`${api}/community/chat/${friendId}`, {
+      const res = await axios.get(`${API_BASE_URL}/community/chat/${friendId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -86,7 +86,7 @@ export const Community = () => {
   const sendRequest = async (id) => {
     try {
       await axios.post(
-        `${api}/community/send-request/${id}`,
+        `${API_BASE_URL}/community/send-request/${id}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -99,7 +99,7 @@ export const Community = () => {
   const acceptRequest = async (senderId) => {
     try {
       await axios.post(
-        `${api}/community/accept-request/${senderId}`,
+        `${API_BASE_URL}/community/accept-request/${senderId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -124,7 +124,7 @@ export const Community = () => {
 
     try {
       await axios.post(
-        `${api}/community/chat/${selected._id}`,
+        `${API_BASE_URL}}/community/chat/${selected._id}`,
         { text },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -146,7 +146,7 @@ export const Community = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 p-6 h-[calc(100vh-80px)]">
 
         {/* LEFT SIDEBAR - Discover + Requests */}
-        <div className="col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+        <div className="col-span-3 bg-white rounded-2xl shadow-sm border border-gray-950 overflow-hidden flex flex-col">
 
           <div className="p-5 border-b bg-gradient-to-r from-white to-gray-50">
             <h2 className="font-bold text-xl flex items-center gap-2">

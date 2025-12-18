@@ -1,45 +1,92 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
 import { Navigation } from "../components/Navigate";
 import { AuthContext } from "../context/AuthContext";
-import { BookOpen, Trash2 } from "lucide-react";
+import { BookOpen, Trash2, Mic, MicOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export const Journal = () => {
   const { user, token } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // ---------------- STATE ----------------
   const [journals, setJournals] = useState([]);
-  const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
 
-  const apiBase = "http://127.0.0.1:3000/api/v1";
+  // Speech states
+  const [finalText, setFinalText] = useState("");
+  const [interimText, setInterimText] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
 
-  // If user is NOT logged in → redirect
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+  // ---------------- SPEECH SETUP ----------------
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognitionRef = useRef(null);
+
   useEffect(() => {
-    if (!token) {
-      navigate("/signin");
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let final = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+
+        if (event.results[i].isFinal) {
+          final += transcript + " ";
+        } else {
+          interim += transcript;
+        }
+      }
+
+      setFinalText((prev) => prev + final);
+      setInterimText(interim);
+    };
+
+    recognitionRef.current = recognition;
+  }, []);
+
+  const startRecording = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition not supported in this browser.");
+      return;
     }
+    recognitionRef.current.start();
+    setIsRecording(true);
+  };
+
+  const stopRecording = () => {
+    recognitionRef.current?.stop();
+    setIsRecording(false);
+    setInterimText("");
+  };
+
+  // ---------------- AUTH ----------------
+  useEffect(() => {
+    if (!token) navigate("/signin");
   }, [token]);
 
   const authHeaders = () => ({
     Authorization: `Bearer ${token}`,
   });
 
-  // Fetch user's journals
+  // ---------------- LOAD JOURNALS ----------------
   const loadJournals = async () => {
     try {
-      const res = await axios.get(`${apiBase}/user/journal`, {
+      const res = await axios.get(`${API_BASE_URL}/user/journal`, {
         headers: authHeaders(),
       });
-
       setJournals(res.data.journals);
     } catch (err) {
-      console.log("Journal Fetch Error:", err);
-
-      if (err.response?.status === 403) {
-        navigate("/signin");
-      }
+      if (err.response?.status === 403) navigate("/signin");
     }
   };
 
@@ -47,33 +94,35 @@ export const Journal = () => {
     if (token) loadJournals();
   }, [token]);
 
+  // ---------------- ADD JOURNAL ----------------
   const addJournal = async () => {
+    const content = finalText + interimText;
     if (!content.trim()) return;
 
     try {
       await axios.post(
-        `${apiBase}/user/journal`,
+        `${API_BASE_URL}/user/journal`,
         { title, content },
         { headers: { ...authHeaders(), "Content-Type": "application/json" } }
       );
 
-      setContent("");
+      setFinalText("");
+      setInterimText("");
       setTitle("");
       loadJournals();
     } catch (err) {
-      console.log("Add Journal Error:", err);
       if (err.response?.status === 403) navigate("/signin");
     }
   };
 
+  // ---------------- DELETE JOURNAL ----------------
   const deleteJournal = async (id) => {
     try {
-      await axios.delete(`${apiBase}/user/journal/${id}`, {
+      await axios.delete(`${API_BASE_URL}/user/journal/${id}`, {
         headers: authHeaders(),
       });
       loadJournals();
     } catch (err) {
-      console.log("Delete Journal Error:", err);
       if (err.response?.status === 403) navigate("/signin");
     }
   };
@@ -98,15 +147,37 @@ export const Journal = () => {
           />
 
           <textarea
-            placeholder="Write your thoughts..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full h-32 p-3 border rounded-lg"
+            placeholder="Write or speak your thoughts..."
+            value={finalText + interimText}
+            onChange={(e) => {
+              setFinalText(e.target.value);
+              setInterimText("");
+            }}
+            className="w-full h-40 p-3 border rounded-lg"
           />
+
+          {/* SPEECH BUTTON */}
+          <div className="flex items-center gap-4 mt-3">
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-white font-semibold ${
+                isRecording ? "bg-red-500" : "bg-indigo-600"
+              }`}
+            >
+              {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+              {isRecording ? "Stop Recording" : "Speak Journal"}
+            </button>
+
+            {isRecording && (
+              <span className="text-sm text-red-500 animate-pulse">
+                Listening...
+              </span>
+            )}
+          </div>
 
           <button
             onClick={addJournal}
-            className="mt-3 px-5 py-2 rounded-md bg-pink-500 text-white font-bold hover:bg-pink-600"
+            className="mt-5 px-5 py-2 rounded-md bg-pink-500 text-white font-bold hover:bg-pink-600"
           >
             Add Entry
           </button>
@@ -125,7 +196,9 @@ export const Journal = () => {
             >
               <div>
                 <h2 className="text-xl font-semibold">{entry.title}</h2>
-                <p className="text-gray-600 mt-2">{entry.content}</p>
+                <p className="text-gray-600 mt-2 whitespace-pre-line">
+                  {entry.content}
+                </p>
                 <p className="text-xs text-gray-400 mt-3">
                   Posted {new Date(entry.createdAt).toLocaleString()}
                 </p>

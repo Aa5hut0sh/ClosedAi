@@ -10,7 +10,7 @@ export const FindHelp = () => {
   const faqs = [
     {
       q: "Is this platform a replacement for therapy?",
-      a: "No. ClosedAI provides mental wellness tools, but it is not a replacement for professional mental health treatment. Always reach out to a professional if you're struggling.",
+      a: "No. Aroha provides mental wellness tools, but it is not a replacement for professional mental health treatment. Always reach out to a professional if you're struggling.",
     },
     {
       q: "Are my journal entries private?",
@@ -74,7 +74,7 @@ export const FindHelp = () => {
               <Phone className="text-blue-500 h-6 w-6" />
               <div>
                 <p className="font-semibold">Phone</p>
-                <p className="text-sm text-gray-500">+91 98765 43210</p>
+                <p className="text-sm text-gray-500">+91 62071 36032</p>
               </div>
             </div>
 
@@ -82,7 +82,7 @@ export const FindHelp = () => {
               <Mail className="text-pink-500 h-6 w-6" />
               <div>
                 <p className="font-semibold">Email</p>
-                <p className="text-sm text-gray-500">support@closedai.com</p>
+                <p className="text-sm text-gray-500">support@Aroha.com</p>
               </div>
             </div>
 
